@@ -1,0 +1,2 @@
+# intCompBench
+Integer compression benchmarks
