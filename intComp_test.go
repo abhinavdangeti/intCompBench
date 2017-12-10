@@ -345,6 +345,8 @@ func TestJwilderEncodingUsecase(t *testing.T) {
 	//var decoder *simple8b.Decoder
 }
 
+// Hybrid: govarint + reductor
+
 type hybridGovarintReductor struct {
 	freqs *bytes.Buffer
 	norms *bytes.Buffer
@@ -380,7 +382,6 @@ func (hgr *hybridGovarintReductor) size() int {
 	return total
 }
 
-// Hybrid: govarint + reductor
 func TestGovarintReductorUsecase(t *testing.T) {
 	encoding := make([]*hybridGovarintReductor, numChunks)
 	for i := 0; i < numChunks; i++ {
@@ -449,7 +450,4 @@ func TestGovarintReductorUsecase(t *testing.T) {
 	fmt.Printf("Total bytes: %v to %v\n", postingDetails.length(), total)
 	fmt.Println("Time for encoding: ", timeToEncode)
 	fmt.Println("===============================================")
-
-	//var decoder *govarint.Base128Decoder
-
 }
