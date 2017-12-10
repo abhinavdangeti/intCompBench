@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/abhinavdangeti/reductor"
 	"github.com/jwilder/encoding/simple8b"
 	"github.com/smerity/govarint"
 )
@@ -18,7 +19,7 @@ type postingDetailsStruct struct {
 	norms []float32
 
 	// Location data
-	fields   [][]uint16
+	fields   [][]uint64 // Actually a uint16, but for testing purposes.
 	pos      [][]uint64
 	starts   [][]uint64
 	ends     [][]uint64
@@ -30,7 +31,7 @@ func (pds *postingDetailsStruct) length() int {
 	total += len(pds.freqs) * 8
 	total += len(pds.norms) * 4
 	for i := 0; i < len(pds.freqs); i++ {
-		total += len(pds.fields[i]) * 2
+		total += len(pds.fields[i]) * 2 // Since this is originally a uint16
 		total += len(pds.pos[i]) * 8
 		total += len(pds.starts[i]) * 8
 		total += len(pds.ends[i]) * 8
@@ -52,15 +53,19 @@ func init() {
 	chunkfactor = 5.0
 
 	postings = []uint64{
-		101, 105, 215, 218, 240,
-		260, 280, 290, 320, 325,
-		375, 480, 578, 690, 755,
+		1400, 1592, 1946, 2000, 2239,
+		34, 556, 600, 1234, 1270,
+		4780, 5290, 6992, 7000, 8262,
+		29590, 39200, 59109, 82693, 100351,
+		2500, 2501, 2503, 3991, 4728,
+		13892, 15001, 15002, 18269, 28651,
+		9618, 9762, 9872, 10021, 10245,
 	}
 
 	postingDetails = &postingDetailsStruct{
 		freqs:    make([]uint64, len(postings)),
 		norms:    make([]float32, len(postings)),
-		fields:   make([][]uint16, len(postings)),
+		fields:   make([][]uint64, len(postings)),
 		pos:      make([][]uint64, len(postings)),
 		starts:   make([][]uint64, len(postings)),
 		ends:     make([][]uint64, len(postings)),
@@ -72,22 +77,22 @@ func init() {
 		postingDetails.norms[i] = rand.Float32()
 
 		numFreqs := int(postingDetails.freqs[i])
-		postingDetails.fields[i] = make([]uint16, numFreqs)
+		postingDetails.fields[i] = make([]uint64, numFreqs)
 		postingDetails.pos[i] = make([]uint64, numFreqs)
 		postingDetails.starts[i] = make([]uint64, numFreqs)
 		postingDetails.ends[i] = make([]uint64, numFreqs)
 		postingDetails.arrayPos[i] = make([][]uint64, numFreqs)
 
-		for j := 0; j < int(postingDetails.freqs[i]); j++ {
-			postingDetails.fields[i][j] = uint16(rand.Uint32() % uint32(100))
-			postingDetails.pos[i][j] = rand.Uint64() % uint64(100)
-			postingDetails.starts[i][j] = rand.Uint64() % uint64(100)
-			postingDetails.ends[i][j] = rand.Uint64() % uint64(100)
+		for j := 0; j < numFreqs; j++ {
+			postingDetails.fields[i][j] = rand.Uint64() % uint64(100)
+			postingDetails.pos[i][j] = rand.Uint64() % uint64(1000)
+			postingDetails.starts[i][j] = rand.Uint64() % uint64(1000)
+			postingDetails.ends[i][j] = rand.Uint64() % uint64(1000)
 
-			numArrayPos := int(rand.Uint32() % uint32(10))
+			numArrayPos := int(rand.Uint32() % uint32(25))
 			postingDetails.arrayPos[i][j] = make([]uint64, numArrayPos)
 			for k := 0; k < numArrayPos; k++ {
-				postingDetails.arrayPos[i][j][k] = rand.Uint64() % uint64(100)
+				postingDetails.arrayPos[i][j][k] = rand.Uint64() % uint64(1000)
 			}
 		}
 	}
@@ -99,7 +104,7 @@ func init() {
 
 func TestGovarintBasic(t *testing.T) {
 	buf := &bytes.Buffer{}
-	x := []uint64{10, 2131, 123123, 1 << 32, 1152921504606846975}
+	x := []uint64{280, 105, 215, 690, 240, 578, 101, 320, 755, 325, 375, 480, 260, 218, 290}
 	encoder := govarint.NewU64Base128Encoder(buf)
 	for _, entry := range x {
 		_, err := encoder.PutU64(entry)
@@ -156,7 +161,7 @@ func TestGovarintUsecase(t *testing.T) {
 		}
 
 		for j := 0; j < int(postingDetails.freqs[i]); j++ {
-			_, err = locEncoder.PutU64(uint64(postingDetails.fields[i][j]))
+			_, err = locEncoder.PutU64(postingDetails.fields[i][j])
 			if err != nil {
 				t.Fatalf("[%v, %v] Encoding field", i, j)
 			}
@@ -209,7 +214,7 @@ func TestGovarintUsecase(t *testing.T) {
 // jwilder/encoding
 
 func TestJwilderEncodingBasic(t *testing.T) {
-	x := []uint64{10, 2131, 123123, 1 << 32, 1152921504606846975}
+	x := []uint64{280, 105, 215, 690, 240, 578, 101, 320, 755, 325, 375, 480, 260, 218, 290}
 	encoder := simple8b.NewEncoder()
 	for _, entry := range x {
 		encoder.Write(entry)
@@ -278,7 +283,7 @@ func TestJwilderEncodingUsecase(t *testing.T) {
 		}
 
 		for j := 0; j < int(postingDetails.freqs[i]); j++ {
-			err = locEncoder.Write(uint64(postingDetails.fields[i][j]))
+			err = locEncoder.Write(postingDetails.fields[i][j])
 			if err != nil {
 				t.Fatalf("[%v, %v] Encoding field", i, j)
 			}
@@ -338,4 +343,113 @@ func TestJwilderEncodingUsecase(t *testing.T) {
 	fmt.Println("===============================================")
 
 	//var decoder *simple8b.Decoder
+}
+
+type hybridGovarintReductor struct {
+	freqs *bytes.Buffer
+	norms *bytes.Buffer
+
+	fields []*reductor.DeltaCompPostings
+	pos    []*reductor.DeltaCompPostings
+	starts []*reductor.DeltaCompPostings
+	ends   []*reductor.DeltaCompPostings
+
+	arrayPos [][]*reductor.DeltaCompPostings
+}
+
+func newHybridGovarintReductor() *hybridGovarintReductor {
+	return &hybridGovarintReductor{
+		freqs: &bytes.Buffer{},
+		norms: &bytes.Buffer{},
+	}
+}
+
+func (hgr *hybridGovarintReductor) size() int {
+	total := hgr.freqs.Len() + hgr.norms.Len()
+	for i := 0; i < len(hgr.fields); i++ {
+		total += hgr.fields[i].SizeInBytes()
+		total += hgr.pos[i].SizeInBytes()
+		total += hgr.starts[i].SizeInBytes()
+		total += hgr.ends[i].SizeInBytes()
+
+		for j := 0; j < len(hgr.arrayPos[i]); j++ {
+			total += hgr.arrayPos[i][j].SizeInBytes()
+		}
+	}
+
+	return total
+}
+
+// Hybrid: govarint + reductor
+func TestGovarintReductorUsecase(t *testing.T) {
+	encoding := make([]*hybridGovarintReductor, numChunks)
+	for i := 0; i < numChunks; i++ {
+		encoding[i] = newHybridGovarintReductor()
+	}
+
+	var freqsEncoder *govarint.Base128Encoder
+	var normsEncoder *govarint.Base128Encoder
+
+	start := time.Now()
+	chunk := -1
+	for i := 0; i < len(postings); i++ {
+		curChunk := i / int(chunkfactor)
+
+		if curChunk != chunk {
+			freqsEncoder.Close()
+			normsEncoder.Close()
+			freqsEncoder = govarint.NewU64Base128Encoder(encoding[curChunk].freqs)
+			normsEncoder = govarint.NewU64Base128Encoder(encoding[curChunk].norms)
+			chunk = curChunk
+		}
+
+		_, err := freqsEncoder.PutU64(postingDetails.freqs[i])
+		if err != nil {
+			t.Fatalf("[%v] Encoding freq", i)
+		}
+
+		norm := postingDetails.norms[i]
+		normBits := math.Float32bits(norm)
+		_, err = normsEncoder.PutU32(normBits)
+		if err != nil {
+			t.Fatalf("[%v] Encoding norm", i)
+		}
+
+		cursor := len(encoding[curChunk].fields)
+
+		encoding[curChunk].fields = append(encoding[curChunk].fields, reductor.NewDeltaCompPostings())
+		encoding[curChunk].fields[cursor].Encode(postingDetails.fields[i])
+
+		encoding[curChunk].pos = append(encoding[curChunk].pos, reductor.NewDeltaCompPostings())
+		encoding[curChunk].pos[cursor].Encode(postingDetails.pos[i])
+
+		encoding[curChunk].starts = append(encoding[curChunk].starts, reductor.NewDeltaCompPostings())
+		encoding[curChunk].starts[cursor].Encode(postingDetails.starts[i])
+
+		encoding[curChunk].ends = append(encoding[curChunk].ends, reductor.NewDeltaCompPostings())
+		encoding[curChunk].ends[cursor].Encode(postingDetails.ends[i])
+
+		encoding[curChunk].arrayPos = append(encoding[curChunk].arrayPos, []*reductor.DeltaCompPostings{})
+		encoding[curChunk].arrayPos[cursor] = make([]*reductor.DeltaCompPostings, postingDetails.freqs[i])
+
+		for j := 0; j < int(postingDetails.freqs[i]); j++ {
+
+			encoding[curChunk].arrayPos[cursor][j] = reductor.NewDeltaCompPostings()
+			encoding[curChunk].arrayPos[cursor][j].Encode(postingDetails.arrayPos[i][j])
+		}
+	}
+	timeToEncode := time.Since(start)
+
+	total := 0
+	for i := 0; i < len(encoding); i++ {
+		total += encoding[i].size()
+	}
+
+	fmt.Println("===============================================")
+	fmt.Printf("Total bytes: %v to %v\n", postingDetails.length(), total)
+	fmt.Println("Time for encoding: ", timeToEncode)
+	fmt.Println("===============================================")
+
+	//var decoder *govarint.Base128Decoder
+
 }
