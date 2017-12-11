@@ -100,6 +100,16 @@ func init() {
 	numChunks = int(math.Ceil(float64(len(postings)) / chunkfactor))
 }
 
+func emitEncodingResults(encodedFootPrint int, timeToEncode time.Duration) {
+	fmt.Println("===============================================")
+	fmt.Println("Actual footprint: ", postingDetails.length())
+	fmt.Println("Encoded footprint: ", encodedFootPrint)
+	fmt.Printf("Reduction in footprint: %.4v%%\n",
+		float32((postingDetails.length()-encodedFootPrint)*100)/float32(postingDetails.length()))
+	fmt.Println("Time for encoding: ", timeToEncode)
+	fmt.Println("===============================================")
+}
+
 // smerity/govarint
 
 func TestGovarintBasic(t *testing.T) {
@@ -203,10 +213,7 @@ func TestGovarintUsecase(t *testing.T) {
 		total += encoding2[i].Len()
 	}
 
-	fmt.Println("===============================================")
-	fmt.Printf("Total bytes: %v to %v\n", postingDetails.length(), total)
-	fmt.Println("Time for encoding: ", timeToEncode)
-	fmt.Println("===============================================")
+	emitEncodingResults(total, timeToEncode)
 
 	//var decoder *govarint.Base128Decoder
 }
@@ -337,10 +344,7 @@ func TestJwilderEncodingUsecase(t *testing.T) {
 		total += len(encoding2[i])
 	}
 
-	fmt.Println("===============================================")
-	fmt.Printf("Total bytes: %v to %v\n", postingDetails.length(), total)
-	fmt.Println("Time for encoding: ", timeToEncode)
-	fmt.Println("===============================================")
+	emitEncodingResults(total, timeToEncode)
 
 	//var decoder *simple8b.Decoder
 }
@@ -446,8 +450,5 @@ func TestGovarintReductorUsecase(t *testing.T) {
 		total += encoding[i].size()
 	}
 
-	fmt.Println("===============================================")
-	fmt.Printf("Total bytes: %v to %v\n", postingDetails.length(), total)
-	fmt.Println("Time for encoding: ", timeToEncode)
-	fmt.Println("===============================================")
+	emitEncodingResults(total, timeToEncode)
 }
