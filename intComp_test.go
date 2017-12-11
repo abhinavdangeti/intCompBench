@@ -100,14 +100,15 @@ func init() {
 	numChunks = int(math.Ceil(float64(len(postings)) / chunkfactor))
 }
 
-func emitEncodingResults(encodedFootPrint int, timeToEncode time.Duration) {
-	fmt.Println("===============================================")
+func emitEncodingResults(name string, encodedFootPrint int, timeToEncode time.Duration) {
+	fmt.Println("=====================================================")
+	fmt.Println("Encoding: ", name)
 	fmt.Println("Actual footprint: ", postingDetails.length())
 	fmt.Println("Encoded footprint: ", encodedFootPrint)
 	fmt.Printf("Reduction in footprint: %.4v%%\n",
 		float32((postingDetails.length()-encodedFootPrint)*100)/float32(postingDetails.length()))
 	fmt.Println("Time for encoding: ", timeToEncode)
-	fmt.Println("===============================================")
+	fmt.Println("=====================================================")
 }
 
 // smerity/govarint
@@ -213,7 +214,7 @@ func TestGovarintUsecase(t *testing.T) {
 		total += encoding2[i].Len()
 	}
 
-	emitEncodingResults(total, timeToEncode)
+	emitEncodingResults("SMERITY/GOVARINT", total, timeToEncode)
 
 	//var decoder *govarint.Base128Decoder
 }
@@ -344,7 +345,7 @@ func TestJwilderEncodingUsecase(t *testing.T) {
 		total += len(encoding2[i])
 	}
 
-	emitEncodingResults(total, timeToEncode)
+	emitEncodingResults("JWILDER/ENCODING", total, timeToEncode)
 
 	//var decoder *simple8b.Decoder
 }
@@ -450,5 +451,5 @@ func TestGovarintReductorUsecase(t *testing.T) {
 		total += encoding[i].size()
 	}
 
-	emitEncodingResults(total, timeToEncode)
+	emitEncodingResults("SMERITY/GOVARINT + ABHINAVDANGETI/REDUCTOR", total, timeToEncode)
 }
