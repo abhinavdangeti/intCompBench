@@ -36,7 +36,7 @@ func (pds *postingDetailsStruct) length() int {
 		total += len(pds.starts[i]) * 8
 		total += len(pds.ends[i]) * 8
 
-		for j := 0; j < len(pds.freqs); j++ {
+		for j := 0; j < len(pds.arrayPos[i]); j++ {
 			total += len(pds.arrayPos[i][j]) * 8
 		}
 	}
